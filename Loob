@@ -1,18 +1,26 @@
 local player = game.Players.LocalPlayer
 
--- Fonction pour créer une poitrine physique et copier couleur/texture
-local function createBoob(char, torso, offset, name)
-    -- Nettoie d'abord les anciennes éventuelles
+local CONFIG = {
+    size        = Vector3.new(1.1, 1.0, 1.0),
+    meshScale   = Vector3.new(1.55, 1.4, 1.2),
+    offsetL     = Vector3.new(-0.28, 0.05, 0.52),
+    offsetR     = Vector3.new( 0.28, 0.05, 0.52),
+    stiffness   = 260,
+    damping     = 12,
+    maxLength   = 0.30,
+    alignForce  = 110,
+    density     = 0.25,
+}
+
+local function createBoob(char, torso, offset, name, tiltSign)
     local old = char:FindFirstChild(name)
     if old then old:Destroy() end
-    local oldAttach = torso:FindFirstChild(name.."Attachment")
+    local oldAttach = torso:FindFirstChild(name .. "Attachment")
     if oldAttach then oldAttach:Destroy() end
 
-    -- Création du part
     local boob = Instance.new("Part")
     boob.Name = name
-    boob.Shape = Enum.PartType.Ball
-    boob.Size = Vector3.new(0.6, 0.6, 0.6)
+    boob.Size = CONFIG.size
     boob.BrickColor = torso.BrickColor
     boob.Color = torso.Color
     boob.Material = torso.Material
@@ -20,85 +28,87 @@ local function createBoob(char, torso, offset, name)
     boob.CanCollide = false
     boob.TopSurface = Enum.SurfaceType.Smooth
     boob.BottomSurface = Enum.SurfaceType.Smooth
+    boob.CustomPhysicalProperties = PhysicalProperties.new(CONFIG.density, 0.3, 0.5, 0.5, 0.5)
     boob.Parent = char
 
-    -- Copier les decals (textures du Torso) vers le boob PART
+    local mesh = Instance.new("SpecialMesh")
+    mesh.MeshType = Enum.MeshType.Sphere
+    mesh.Scale = CONFIG.meshScale
+    mesh.Parent = boob
+
     for _, decal in ipairs(torso:GetChildren()) do
         if decal:IsA("Decal") then
-            local copy = decal:Clone()
-            copy.Parent = boob
+            decal:Clone().Parent = boob
         end
     end
 
-    -- Attachement côté torse
-    local torsoAtt = Instance.new("Attachment")
-    torsoAtt.Name = name.."Attachment"
-    torsoAtt.Parent = torso
-    torsoAtt.Position = offset
+    local shirt = char:FindFirstChildOfClass("Shirt")
+    if shirt and shirt.ShirtTemplate ~= "" then
+        local frontDecal = Instance.new("Decal")
+        frontDecal.Texture = shirt.ShirtTemplate
+        frontDecal.Face = Enum.NormalId.Front
+        frontDecal.Parent = boob
+    end
 
-    -- Attachement côté sein
+    local sa = torso:FindFirstChildOfClass("SurfaceAppearance")
+    if sa then sa:Clone().Parent = boob end
+
+    local torsoAtt = Instance.new("Attachment")
+    torsoAtt.Name = name .. "Attachment"
+    torsoAtt.Position = offset
+    torsoAtt.Parent = torso
+
     local boobAtt = Instance.new("Attachment")
+    boobAtt.Position = Vector3.new(0, 0, 0)
     boobAtt.Parent = boob
 
-    -- Spring
+    boob.CFrame = torso.CFrame * CFrame.new(offset.X, offset.Y, offset.Z) * CFrame.Angles(0, 0, math.rad(tiltSign * 8))
+
     local spring = Instance.new("SpringConstraint")
     spring.Attachment0 = torsoAtt
     spring.Attachment1 = boobAtt
+    spring.FreeLength = 0
+    spring.Stiffness = CONFIG.stiffness
+    spring.Damping = CONFIG.damping
+    spring.LimitsEnabled = true
+    spring.MinLength = 0
+    spring.MaxLength = CONFIG.maxLength
     spring.Parent = boob
-    spring.Stiffness = 40
-    spring.Damping = 3
 
-    -- CFrame de départ
-    boob.CFrame = torso.CFrame * CFrame.new(offset.X, offset.Y, offset.Z)
-
-    -- Anti-"glitch" : force la position y (évite que le part tombe si bug physique)
-    local bp = Instance.new("BodyPosition")
-    bp.Position = boob.Position
-    bp.MaxForce = Vector3.new(0, 10000, 0)
-    bp.P = 1000
-    bp.D = 100
-    bp.Parent = boob
+    local align = Instance.new("AlignPosition")
+    align.Attachment0 = boobAtt
+    align.Attachment1 = torsoAtt
+    align.MaxForce = CONFIG.alignForce
+    align.Responsiveness = 12
+    align.RigidityEnabled = false
+    align.Parent = boob
 
     return boob
 end
 
--- Fonction utilitaire : vérifie l'existence/physique et restaure si besoin
 local function maintainBoobs()
     local char = player.Character
     if not char then return end
-    -- R15: UpperTorso obligatoire
     local torso = char:FindFirstChild("UpperTorso")
     if not torso then return end
 
     local boobL = char:FindFirstChild("BoobL")
     local boobR = char:FindFirstChild("BoobR")
+
     if not (boobL and boobL:FindFirstChildOfClass("SpringConstraint") and torso:FindFirstChild("BoobLAttachment")) then
-        boobL = createBoob(char, torso, Vector3.new(-0.4, 0.4, 0.6), "BoobL")
+        boobL = createBoob(char, torso, CONFIG.offsetL, "BoobL", -1)
     end
     if not (boobR and boobR:FindFirstChildOfClass("SpringConstraint") and torso:FindFirstChild("BoobRAttachment")) then
-        boobR = createBoob(char, torso, Vector3.new(0.4, 0.4, 0.6), "BoobR")
-    end
-
-    -- Exemple de comparaison taille
-    if boobL and boobR then
-        if boobL.Size.Magnitude > boobR.Size.Magnitude then
-            print("Sein gauche plus gros")
-        elseif boobL.Size.Magnitude < boobR.Size.Magnitude then
-            print("Sein droit plus gros")
-        else
-            print("Même taille")
-        end
+        boobR = createBoob(char, torso, CONFIG.offsetR, "BoobR", 1)
     end
 end
 
--- Rafraîchi à chaque respawn (R15)
 player.CharacterAdded:Connect(function()
-    wait(1) -- laisse le temps au personnage d'apparaitre
+    task.wait(1)
     maintainBoobs()
 end)
 
--- Boucle vérification toutes les 0.5 secondes
 while true do
     pcall(maintainBoobs)
-    wait(0.5)
+    task.wait(0.5)
 end
