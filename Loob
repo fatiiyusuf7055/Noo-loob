@@ -2,21 +2,18 @@ local player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
 local CONFIG = {
-    size      = Vector3.new(0.95, 0.9, 0.85),
-    meshScale = Vector3.new(1.45, 1.35, 1.15),
-    offsetL   = Vector3.new(-0.26, 0.05, -0.55),
-    offsetR   = Vector3.new( 0.26, 0.05, -0.55),
-    tiltL     = math.rad(-10),
-    tiltR     = math.rad( 10),
-    stiffness = 200,
-    damping   = 18,
-    maxDisp   = 0.22,
+    size        = Vector3.new(0.95, 0.9, 0.85),
+    meshScale   = Vector3.new(1.45, 1.35, 1.15),
+    offsetL     = Vector3.new(-0.26, 0.05, -0.55),
+    offsetR     = Vector3.new( 0.26, 0.05, -0.55),
+    tiltL       = math.rad(-10),
+    tiltR       = math.rad( 10),
+    bounceSpeed = 9,
+    bounceAmp   = 0.06,
 }
 
 local boobL, boobR = nil, nil
-local springPosL, springVelL = 0, 0
-local springPosR, springVelR = 0, 0
-local clock, walkPhase, prevVelY = 0, 0, 0
+local clock = 0
 
 local function createBoob(char, torso, name)
     local old = char:FindFirstChild(name)
@@ -53,66 +50,29 @@ local function setupBoobs()
     if not char then return end
     local torso = char:FindFirstChild("UpperTorso")
     if not torso then return end
-    springPosL, springVelL = 0, 0
-    springPosR, springVelR = 0, 0
-    prevVelY  = 0
-    walkPhase = 0
     boobL = createBoob(char, torso, "BoobL")
     boobR = createBoob(char, torso, "BoobR")
 end
 
 RunService.Heartbeat:Connect(function(dt)
-    dt = math.min(dt, 0.05)
     clock = clock + dt
 
     local char = player.Character
     if not char then return end
     local torso = char:FindFirstChild("UpperTorso")
-    local hrp   = char:FindFirstChild("HumanoidRootPart")
-    if not torso or not hrp then return end
+    if not torso then return end
 
-    local vel      = hrp.AssemblyLinearVelocity
-    local velY     = vel.Y
-    local horizSpd = Vector3.new(vel.X, 0, vel.Z).Magnitude
-
-    local impact = 0
-    if prevVelY < -8 and velY > prevVelY + 3 then
-        impact = math.clamp(math.abs(prevVelY) * 0.09, 0, 0.35)
-    end
-    prevVelY = velY
-
-    local drive = 0
-    if horizSpd > 1 then
-        local stepFreq = 0.4 + horizSpd * 0.07
-        walkPhase = walkPhase + dt * stepFreq * math.pi * 2
-        local stepAmp = math.min(horizSpd / 14, 1) * 4.0 + 0.4
-        drive = math.sin(walkPhase) * stepAmp
-    else
-        drive = math.sin(clock * 1.1) * 0.18
-    end
-
-    if velY > 4 then
-        drive = drive - math.min(velY * 0.05, 0.18)
-    elseif velY < -4 then
-        drive = drive + math.min(math.abs(velY) * 0.035, 0.15)
-    end
-
-    local fL = -CONFIG.stiffness * springPosL - CONFIG.damping * springVelL + drive + impact
-    springVelL = springVelL + fL * dt
-    springPosL = math.clamp(springPosL + springVelL * dt, -CONFIG.maxDisp, CONFIG.maxDisp)
-
-    local fR = -CONFIG.stiffness * springPosR - CONFIG.damping * springVelR + drive * 0.93 + impact * 0.97
-    springVelR = springVelR + fR * dt
-    springPosR = math.clamp(springPosR + springVelR * dt, -CONFIG.maxDisp, CONFIG.maxDisp)
+    local bounceL = math.sin(clock * CONFIG.bounceSpeed) * CONFIG.bounceAmp
+    local bounceR = math.sin(clock * CONFIG.bounceSpeed + math.pi * 0.3) * CONFIG.bounceAmp
 
     if boobL and boobL.Parent then
         boobL.CFrame = torso.CFrame
-            * CFrame.new(CONFIG.offsetL + Vector3.new(0, springPosL, 0))
+            * CFrame.new(CONFIG.offsetL + Vector3.new(0, bounceL, 0))
             * CFrame.Angles(0, 0, CONFIG.tiltL)
     end
     if boobR and boobR.Parent then
         boobR.CFrame = torso.CFrame
-            * CFrame.new(CONFIG.offsetR + Vector3.new(0, springPosR, 0))
+            * CFrame.new(CONFIG.offsetR + Vector3.new(0, bounceR, 0))
             * CFrame.Angles(0, 0, CONFIG.tiltR)
     end
 end)
