@@ -10,6 +10,8 @@ local CONFIG = {
 local function createBoob(char, torso, offset, name, tiltSign)
     local old = char:FindFirstChild(name)
     if old then old:Destroy() end
+    local oldMotor = torso:FindFirstChild(name .. "Motor")
+    if oldMotor then oldMotor:Destroy() end
 
     local boob = Instance.new("Part")
     boob.Name = name
@@ -45,14 +47,13 @@ local function createBoob(char, torso, offset, name, tiltSign)
     local sa = torso:FindFirstChildOfClass("SurfaceAppearance")
     if sa then sa:Clone().Parent = boob end
 
-    boob.CFrame = torso.CFrame
-        * CFrame.new(offset.X, offset.Y, offset.Z)
-        * CFrame.Angles(0, 0, math.rad(tiltSign * 8))
-
-    local weld = Instance.new("WeldConstraint")
-    weld.Part0 = torso
-    weld.Part1 = boob
-    weld.Parent = boob
+    local motor = Instance.new("Motor6D")
+    motor.Name = name .. "Motor"
+    motor.Part0 = torso
+    motor.Part1 = boob
+    motor.C0 = CFrame.new(offset) * CFrame.Angles(0, 0, math.rad(tiltSign * 8))
+    motor.C1 = CFrame.new(0, 0, 0)
+    motor.Parent = torso
 
     return boob
 end
@@ -63,10 +64,20 @@ local function maintainBoobs()
     local torso = char:FindFirstChild("UpperTorso")
     if not torso then return end
 
-    local boobL = char:FindFirstChild("BoobL")
-    local boobR = char:FindFirstChild("BoobR")
-
-    if not (boobL and boobL:FindFirstChildOfClass("WeldConstraint")) then
+    if not (char:FindFirstChild("BoobL") and torso:FindFirstChild("BoobLMotor")) then
         createBoob(char, torso, CONFIG.offsetL, "BoobL", -1)
     end
-    if not (boobR and boobR:FindFirstChild
+    if not (char:FindFirstChild("BoobR") and torso:FindFirstChild("BoobRMotor")) then
+        createBoob(char, torso, CONFIG.offsetR, "BoobR",  1)
+    end
+end
+
+player.CharacterAdded:Connect(function()
+    task.wait(1)
+    maintainBoobs()
+end)
+
+while true do
+    pcall(maintainBoobs)
+    task.wait(0.5)
+end
