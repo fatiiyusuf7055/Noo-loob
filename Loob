@@ -15,7 +15,7 @@ local CONFIG = {
 local boobL, boobR = nil, nil
 local clock = 0
 
-local function createBoob(char, torso, name)
+local function createBoob(char, torso, offset, name, tilt)
     local old = char:FindFirstChild(name)
     if old then old:Destroy() end
 
@@ -30,6 +30,7 @@ local function createBoob(char, torso, name)
     boob.CastShadow = false
     boob.TopSurface = Enum.SurfaceType.Smooth
     boob.BottomSurface = Enum.SurfaceType.Smooth
+    boob.CFrame = torso.CFrame * CFrame.new(offset) * CFrame.Angles(0, 0, tilt)
     boob.Parent = char
 
     local mesh = Instance.new("SpecialMesh")
@@ -50,8 +51,8 @@ local function setupBoobs()
     if not char then return end
     local torso = char:FindFirstChild("UpperTorso")
     if not torso then return end
-    boobL = createBoob(char, torso, "BoobL")
-    boobR = createBoob(char, torso, "BoobR")
+    boobL = createBoob(char, torso, CONFIG.offsetL, "BoobL", CONFIG.tiltL)
+    boobR = createBoob(char, torso, CONFIG.offsetR, "BoobR", CONFIG.tiltR)
 end
 
 RunService.Heartbeat:Connect(function(dt)
