@@ -1,17 +1,27 @@
 local player = game.Players.LocalPlayer
+local RunService = game:GetService("RunService")
 
 local CONFIG = {
-    size      = Vector3.new(1.1, 1.0, 1.0),
-    meshScale = Vector3.new(1.55, 1.4, 1.2),
-    offsetL   = Vector3.new(-0.28, 0.05, -0.52),
-    offsetR   = Vector3.new( 0.28, 0.05, -0.52),
+    size         = Vector3.new(1.6, 1.5, 1.4),
+    meshScale    = Vector3.new(2.0, 1.85, 1.55),
+    offsetL      = Vector3.new(-0.35, 0.0, -0.68),
+    offsetR      = Vector3.new( 0.35, 0.0, -0.68),
+    tiltL        = math.rad(-10),
+    tiltR        = math.rad( 10),
+    bounceSpeed  = 9,
+    bounceIdle   = 0.03,
+    bounceWalk   = 0.09,
+    bounceRun    = 0.18,
+    speedWalk    = 8,
+    speedRun     = 16,
 }
 
-local function createBoob(char, torso, offset, name, tiltSign)
+local boobL, boobR = nil, nil
+local clock = 0
+
+local function createBoob(char, torso, name)
     local old = char:FindFirstChild(name)
     if old then old:Destroy() end
-    local oldMotor = torso:FindFirstChild(name .. "Motor")
-    if oldMotor then oldMotor:Destroy() end
 
     local boob = Instance.new("Part")
     boob.Name = name
@@ -19,8 +29,9 @@ local function createBoob(char, torso, offset, name, tiltSign)
     boob.BrickColor = torso.BrickColor
     boob.Color = torso.Color
     boob.Material = torso.Material
-    boob.Anchored = false
+    boob.Anchored = true
     boob.CanCollide = false
+    boob.CastShadow = false
     boob.TopSurface = Enum.SurfaceType.Smooth
     boob.BottomSurface = Enum.SurfaceType.Smooth
     boob.Parent = char
@@ -38,46 +49,69 @@ local function createBoob(char, torso, offset, name, tiltSign)
 
     local shirt = char:FindFirstChildOfClass("Shirt")
     if shirt and shirt.ShirtTemplate ~= "" then
-        local frontDecal = Instance.new("Decal")
-        frontDecal.Texture = shirt.ShirtTemplate
-        frontDecal.Face = Enum.NormalId.Front
-        frontDecal.Parent = boob
+        local d = Instance.new("Decal")
+        d.Texture = shirt.ShirtTemplate
+        d.Face = Enum.NormalId.Front
+        d.Parent = boob
     end
 
     local sa = torso:FindFirstChildOfClass("SurfaceAppearance")
     if sa then sa:Clone().Parent = boob end
 
-    local motor = Instance.new("Motor6D")
-    motor.Name = name .. "Motor"
-    motor.Part0 = torso
-    motor.Part1 = boob
-    motor.C0 = CFrame.new(offset) * CFrame.Angles(0, 0, math.rad(tiltSign * 8))
-    motor.C1 = CFrame.new(0, 0, 0)
-    motor.Parent = torso
-
     return boob
 end
 
-local function maintainBoobs()
+local function setupBoobs()
+    local char = player.Character
+    if not char then return end
+    local torso = char:FindFirstChild("UpperTorso")
+    if not torso then return end
+    boobL = createBoob(char, torso, "BoobL")
+    boobR = createBoob(char, torso, "BoobR")
+end
+
+RunService.Heartbeat:Connect(function(dt)
+    clock = clock + dt
+
     local char = player.Character
     if not char then return end
     local torso = char:FindFirstChild("UpperTorso")
     if not torso then return end
 
-    if not (char:FindFirstChild("BoobL") and torso:FindFirstChild("BoobLMotor")) then
-        createBoob(char, torso, CONFIG.offsetL, "BoobL", -1)
-    end
-    if not (char:FindFirstChild("BoobR") and torso:FindFirstChild("BoobRMotor")) then
-        createBoob(char, torso, CONFIG.offsetR, "BoobR",  1)
-    end
-end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local speed = hrp and hrp.AssemblyLinearVelocity.Magnitude or 0
 
-player.CharacterAdded:Connect(function()
-    task.wait(1)
-    maintainBoobs()
+    local amplitude
+    if speed < CONFIG.speedWalk then
+        local t = speed / CONFIG.speedWalk
+        amplitude = CONFIG.bounceIdle + (CONFIG.bounceWalk - CONFIG.bounceIdle) * t
+    elseif speed < CONFIG.speedRun then
+        local t = (speed - CONFIG.speedWalk) / (CONFIG.speedRun - CONFIG.speedWalk)
+        amplitude = CONFIG.bounceWalk + (CONFIG.bounceRun - CONFIG.bounceWalk) * t
+    else
+        amplitude = CONFIG.bounceRun
+    end
+
+    local bounceL = math.sin(clock * CONFIG.bounceSpeed) * amplitude
+    local bounceR = math.sin(clock * CONFIG.bounceSpeed + math.pi * 0.3) * amplitude
+
+    if boobL and boobL.Parent then
+        boobL.CFrame = torso.CFrame
+            * CFrame.new(CONFIG.offsetL + Vector3.new(0, bounceL, 0))
+            * CFrame.Angles(0, 0, CONFIG.tiltL)
+    end
+    if boobR and boobR.Parent then
+        boobR.CFrame = torso.CFrame
+            * CFrame.new(CONFIG.offsetR + Vector3.new(0, bounceR, 0))
+            * CFrame.Angles(0, 0, CONFIG.tiltR)
+    end
 end)
 
-while true do
-    pcall(maintainBoobs)
-    task.wait(0.5)
-end
+player.CharacterAdded:Connect(function()
+    boobL, boobR = nil, nil
+    task.wait(1)
+    setupBoobs()
+end)
+
+task.wait(1)
+setupBoobs()
