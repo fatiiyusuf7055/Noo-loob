@@ -55,7 +55,7 @@ local function setupBoobs()
     if not torso then return end
     springPosL, springVelL = 0, 0
     springPosR, springVelR = 0, 0
-    prevVelY = 0
+    prevVelY  = 0
     walkPhase = 0
     boobL = createBoob(char, torso, "BoobL")
     boobR = createBoob(char, torso, "BoobR")
@@ -75,14 +75,12 @@ RunService.Heartbeat:Connect(function(dt)
     local velY     = vel.Y
     local horizSpd = Vector3.new(vel.X, 0, vel.Z).Magnitude
 
-    -- Impact atterrissage
     local impact = 0
     if prevVelY < -8 and velY > prevVelY + 3 then
         impact = math.clamp(math.abs(prevVelY) * 0.09, 0, 0.35)
     end
     prevVelY = velY
 
-    -- Force motrice
     local drive = 0
     if horizSpd > 1 then
         local stepFreq = 0.4 + horizSpd * 0.07
@@ -99,12 +97,10 @@ RunService.Heartbeat:Connect(function(dt)
         drive = drive + math.min(math.abs(velY) * 0.035, 0.15)
     end
 
-    -- Ressort gauche
     local fL = -CONFIG.stiffness * springPosL - CONFIG.damping * springVelL + drive + impact
     springVelL = springVelL + fL * dt
     springPosL = math.clamp(springPosL + springVelL * dt, -CONFIG.maxDisp, CONFIG.maxDisp)
 
-    -- Ressort droit (légèrement déphasé)
     local fR = -CONFIG.stiffness * springPosR - CONFIG.damping * springVelR + drive * 0.93 + impact * 0.97
     springVelR = springVelR + fR * dt
     springPosR = math.clamp(springPosR + springVelR * dt, -CONFIG.maxDisp, CONFIG.maxDisp)
@@ -129,3 +125,11 @@ end)
 
 task.wait(1)
 setupBoobs()
+
+while true do
+    task.wait(5)
+    local char = player.Character
+    if char and not char:FindFirstChild("BoobL") then
+        setupBoobs()
+    end
+end
