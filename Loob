@@ -34,11 +34,9 @@ mR.MeshType = Enum.MeshType.Sphere
 mR.Scale = Vector3.new(1.45, 1.35, 1.15)
 mR.Parent = R
 
-local RunService = game:GetService("RunService")
 local t = 0
-while true do
-    local dt = RunService.Heartbeat:Wait()
-    t = t + dt
+while task.wait(0.03) do
+    t = t + 0.03
     if L.Parent and R.Parent and torso.Parent then
         L.CFrame = torso.CFrame
             * CFrame.new(-0.26, 0.05 + math.sin(t * 9) * 0.06, -0.55)
