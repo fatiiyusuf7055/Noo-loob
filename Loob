@@ -1,9 +1,7 @@
 local player = game.Players.LocalPlayer
-
 local char = player.Character or player.CharacterAdded:Wait()
-task.wait(1)
-
-local torso = char:FindFirstChild("UpperTorso")
+task.wait(3)
+local torso = char:WaitForChild("UpperTorso", 10)
 if not torso then return end
 
 local shirt = char:FindFirstChildOfClass("Shirt")
@@ -13,41 +11,43 @@ L.Size = Vector3.new(0.95, 0.9, 0.85)
 L.BrickColor = torso.BrickColor
 L.Color = torso.Color
 L.Material = torso.Material
-L.Anchored = true
+L.Anchored = false
 L.CanCollide = false
-L.CFrame = torso.CFrame * CFrame.new(-0.26, 0.05, -0.55)
 L.Parent = char
 local mL = Instance.new("SpecialMesh")
 mL.MeshType = Enum.MeshType.Sphere
 mL.Scale = Vector3.new(1.45, 1.35, 1.15)
 mL.Parent = L
 if shirt then mL.TextureId = shirt.ShirtTemplate end
+local motorL = Instance.new("Motor6D")
+motorL.Part0 = torso
+motorL.Part1 = L
+motorL.C0 = CFrame.new(-0.26, 0.05, -0.58) * CFrame.Angles(0, 0, math.rad(-10))
+motorL.Parent = torso
 
 local R = Instance.new("Part")
 R.Size = Vector3.new(0.95, 0.9, 0.85)
 R.BrickColor = torso.BrickColor
 R.Color = torso.Color
 R.Material = torso.Material
-R.Anchored = true
+R.Anchored = false
 R.CanCollide = false
-R.CFrame = torso.CFrame * CFrame.new(0.26, 0.05, -0.55)
 R.Parent = char
 local mR = Instance.new("SpecialMesh")
 mR.MeshType = Enum.MeshType.Sphere
 mR.Scale = Vector3.new(1.45, 1.35, 1.15)
 mR.Parent = R
 if shirt then mR.TextureId = shirt.ShirtTemplate end
+local motorR = Instance.new("Motor6D")
+motorR.Part0 = torso
+motorR.Part1 = R
+motorR.C0 = CFrame.new(0.26, 0.05, -0.58) * CFrame.Angles(0, 0, math.rad(10))
+motorR.Parent = torso
 
 local t = 0
-while true do
+while motorL.Parent and motorR.Parent do
     task.wait()
     t = t + 0.016
-    if L.Parent and R.Parent and torso.Parent then
-        L.CFrame = torso.CFrame
-            * CFrame.new(-0.26, 0.05 + math.sin(t * 9) * 0.06, -0.55)
-            * CFrame.Angles(0, 0, math.rad(-10))
-        R.CFrame = torso.CFrame
-            * CFrame.new(0.26, 0.05 + math.sin(t * 9 + 1) * 0.06, -0.55)
-            * CFrame.Angles(0, 0, math.rad(10))
-    end
+    motorL.C0 = CFrame.new(-0.26, 0.05 + math.sin(t*9)*0.06, -0.58) * CFrame.Angles(0, 0, math.rad(-10))
+    motorR.C0 = CFrame.new( 0.26, 0.05 + math.sin(t*9+1)*0.06, -0.58) * CFrame.Angles(0, 0, math.rad(10))
 end
