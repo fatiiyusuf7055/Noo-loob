@@ -6,8 +6,6 @@ task.wait(1)
 local torso = char:FindFirstChild("UpperTorso")
 if not torso then return end
 
-local shirt = char:FindFirstChildOfClass("Shirt")
-
 local L = Instance.new("Part")
 L.Size = Vector3.new(0.95, 0.9, 0.85)
 L.BrickColor = torso.BrickColor
@@ -21,7 +19,6 @@ local mL = Instance.new("SpecialMesh")
 mL.MeshType = Enum.MeshType.Sphere
 mL.Scale = Vector3.new(1.45, 1.35, 1.15)
 mL.Parent = L
-if shirt then mL.TextureId = shirt.ShirtTemplate end
 
 local R = Instance.new("Part")
 R.Size = Vector3.new(0.95, 0.9, 0.85)
@@ -36,7 +33,6 @@ local mR = Instance.new("SpecialMesh")
 mR.MeshType = Enum.MeshType.Sphere
 mR.Scale = Vector3.new(1.45, 1.35, 1.15)
 mR.Parent = R
-if shirt then mR.TextureId = shirt.ShirtTemplate end
 
 local RunService = game:GetService("RunService")
 local t = 0
