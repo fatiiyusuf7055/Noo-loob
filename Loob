@@ -1,96 +1,48 @@
 local player = game.Players.LocalPlayer
-local RunService = game:GetService("RunService")
 
-local CONFIG = {
-    size        = Vector3.new(0.95, 0.9, 0.85),
-    meshScale   = Vector3.new(1.45, 1.35, 1.15),
-    offsetL     = Vector3.new(-0.26, 0.05, -0.55),
-    offsetR     = Vector3.new( 0.26, 0.05, -0.55),
-    tiltL       = math.rad(-10),
-    tiltR       = math.rad( 10),
-    bounceSpeed = 9,
-    bounceAmp   = 0.06,
-}
-
-local boobL, boobR = nil, nil
-local clock = 0
-
-local function createBoob(char, torso, offset, name, tilt)
-    local old = char:FindFirstChild(name)
-    if old then old:Destroy() end
-
-    local boob = Instance.new("Part")
-    boob.Name = name
-    boob.Size = CONFIG.size
-    boob.BrickColor = torso.BrickColor
-    boob.Color = torso.Color
-    boob.Material = torso.Material
-    boob.Anchored = true
-    boob.CanCollide = false
-    boob.CastShadow = false
-    boob.TopSurface = Enum.SurfaceType.Smooth
-    boob.BottomSurface = Enum.SurfaceType.Smooth
-    boob.CFrame = torso.CFrame * CFrame.new(offset) * CFrame.Angles(0, 0, tilt)
-    boob.Parent = char
-
-    local mesh = Instance.new("SpecialMesh")
-    mesh.MeshType = Enum.MeshType.Sphere
-    mesh.Scale = CONFIG.meshScale
-    mesh.Parent = boob
-
-    local shirt = char:FindFirstChildOfClass("Shirt")
-    if shirt and shirt.ShirtTemplate ~= "" then
-        mesh.TextureId = shirt.ShirtTemplate
-    end
-
-    return boob
-end
-
-local function setupBoobs()
-    local char = player.Character
-    if not char then return end
-    local torso = char:FindFirstChild("UpperTorso")
-    if not torso then return end
-    boobL = createBoob(char, torso, CONFIG.offsetL, "BoobL", CONFIG.tiltL)
-    boobR = createBoob(char, torso, CONFIG.offsetR, "BoobR", CONFIG.tiltR)
-end
-
-RunService.Heartbeat:Connect(function(dt)
-    clock = clock + dt
-
-    local char = player.Character
-    if not char then return end
-    local torso = char:FindFirstChild("UpperTorso")
-    if not torso then return end
-
-    local bounceL = math.sin(clock * CONFIG.bounceSpeed) * CONFIG.bounceAmp
-    local bounceR = math.sin(clock * CONFIG.bounceSpeed + math.pi * 0.3) * CONFIG.bounceAmp
-
-    if boobL and boobL.Parent then
-        boobL.CFrame = torso.CFrame
-            * CFrame.new(CONFIG.offsetL + Vector3.new(0, bounceL, 0))
-            * CFrame.Angles(0, 0, CONFIG.tiltL)
-    end
-    if boobR and boobR.Parent then
-        boobR.CFrame = torso.CFrame
-            * CFrame.new(CONFIG.offsetR + Vector3.new(0, bounceR, 0))
-            * CFrame.Angles(0, 0, CONFIG.tiltR)
-    end
-end)
-
-player.CharacterAdded:Connect(function()
-    boobL, boobR = nil, nil
-    task.wait(1)
-    setupBoobs()
-end)
-
+local char = player.Character or player.CharacterAdded:Wait()
 task.wait(1)
-setupBoobs()
 
-while true do
-    task.wait(5)
-    local char = player.Character
-    if char and not char:FindFirstChild("BoobL") then
-        setupBoobs()
+local torso = char:FindFirstChild("UpperTorso")
+if not torso then return end
+
+local L = Instance.new("Part")
+L.Size = Vector3.new(0.95, 0.9, 0.85)
+L.BrickColor = torso.BrickColor
+L.Color = torso.Color
+L.Material = torso.Material
+L.Anchored = true
+L.CanCollide = false
+L.CFrame = torso.CFrame * CFrame.new(-0.26, 0.05, -0.55)
+L.Parent = char
+local mL = Instance.new("SpecialMesh")
+mL.MeshType = Enum.MeshType.Sphere
+mL.Scale = Vector3.new(1.45, 1.35, 1.15)
+mL.Parent = L
+
+local R = Instance.new("Part")
+R.Size = Vector3.new(0.95, 0.9, 0.85)
+R.BrickColor = torso.BrickColor
+R.Color = torso.Color
+R.Material = torso.Material
+R.Anchored = true
+R.CanCollide = false
+R.CFrame = torso.CFrame * CFrame.new(0.26, 0.05, -0.55)
+R.Parent = char
+local mR = Instance.new("SpecialMesh")
+mR.MeshType = Enum.MeshType.Sphere
+mR.Scale = Vector3.new(1.45, 1.35, 1.15)
+mR.Parent = R
+
+local t = 0
+while task.wait(0.03) do
+    t = t + 0.03
+    if L.Parent and R.Parent and torso.Parent then
+        L.CFrame = torso.CFrame
+            * CFrame.new(-0.26, 0.05 + math.sin(t * 9) * 0.06, -0.55)
+            * CFrame.Angles(0, 0, math.rad(-10))
+        R.CFrame = torso.CFrame
+            * CFrame.new(0.26, 0.05 + math.sin(t * 9 + 1) * 0.06, -0.55)
+            * CFrame.Angles(0, 0, math.rad(10))
     end
 end
